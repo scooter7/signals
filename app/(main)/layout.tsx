@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Home, User, Briefcase, Users, MessageSquare, LogOut, FileText, Sparkles } from 'lucide-react';
@@ -10,8 +9,7 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient(); // FIX: No argument needed
 
   const {
     data: { session },

@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Briefcase, GraduationCap, Star, Users } from 'lucide-react';
 import ExperienceForm from '@/components/dashboard/ExperienceForm';
 import { Database } from '@/lib/database.types';
-import ExperienceItem from '@/components/dashboard/ExperienceItem'; // Import the new component
+import ExperienceItem from '@/components/dashboard/ExperienceItem';
 
 export type Experience = Database['public']['Tables']['experiences']['Row'];
 type ExperienceType = Database['public']['Enums']['experience_type'];
@@ -19,8 +18,7 @@ const experienceIcons: Record<ExperienceType, React.ElementType> = {
 };
 
 export default async function ExperiencesPage() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient(); // FIX: No argument needed
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/login');

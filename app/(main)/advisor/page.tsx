@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 import AIChatClient from '@/components/advisor/AIChatClient';
@@ -14,8 +13,7 @@ export type FullUserProfile = {
 };
 
 export default async function AdvisorPage() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient(); // FIX: No argument needed
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/login');

@@ -1,16 +1,13 @@
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
-import { TrendingUp } from 'lucide-react'; // Import the icon for the score card
+import { TrendingUp } from 'lucide-react';
 
 export default async function DashboardPage() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient(); // FIX: No argument needed
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Updated query to select both full_name and signal_score
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, signal_score')
@@ -27,7 +24,6 @@ export default async function DashboardPage() {
       </p>
       
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* New Signal Score Card */}
         <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center mb-2">
                 <TrendingUp className="w-6 h-6 mr-3 text-green-500" />
@@ -36,8 +32,6 @@ export default async function DashboardPage() {
             <p className="text-4xl font-bold text-gray-800">{profile?.signal_score || 0}</p>
             <p className="text-sm text-gray-500 mt-1">This score helps recruiters find you. Keep building your profile to increase it!</p>
         </div>
-        
-        {/* Other placeholder cards */}
         <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="font-semibold text-lg mb-2">Recent Activity</h2>
             <p className="text-sm text-gray-600">No new activity.</p>
