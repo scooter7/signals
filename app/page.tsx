@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { Logo } from '@/components/ui/Logo'; // <-- Import the new Logo component
 
 export default async function HomePage() {
-  const supabase = createClient() // FIX: No argument needed
+  const supabase = createClient()
 
   const {
     data: { session },
@@ -14,9 +15,9 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-100 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 via-blue-50 to-white">
       <header className="p-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-blue-800">Career Connect+</h1>
+        <Logo /> {/* <-- Use the Logo component */}
         <nav>
           <Link href="/login" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
             Sign In
@@ -30,7 +31,7 @@ export default async function HomePage() {
         <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
           Connect with opportunities, showcase your achievements, and build your future. Your journey starts here.
         </p>
-        <Link href="/signup" className="bg-green-500 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-green-600 transition-transform transform hover:scale-105">
+        <Link href="/signup" className="bg-purple-600 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-purple-700 transition-transform transform hover:scale-105">
           Get Started for Free
         </Link>
       </main>

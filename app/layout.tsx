@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Career Connect+",
-  description: "Your path to academic and professional success.",
+  title: "Signals", // <-- Updated Name
+  description: "Connecting education to professional success",
 };
 
 export default function RootLayout({
