@@ -1,12 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import ProfileEditor from '@/components/dashboard/ProfileEditor';
 import { User } from 'lucide-react';
 
 export default async function ProfilePage() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient(); // FIX: No argument needed
 
   const {
     data: { session },
@@ -23,8 +21,6 @@ export default async function ProfilePage() {
     .single();
 
   if (error || !profile) {
-    // This could happen if a profile wasn't created on signup.
-    // You might want to handle this more gracefully.
     console.error('Error fetching profile:', error);
     return <div>Error loading profile. Please try again later.</div>;
   }

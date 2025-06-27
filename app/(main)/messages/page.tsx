@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { MessageSquare } from 'lucide-react';
 import { Database } from '@/lib/database.types';
@@ -18,8 +17,7 @@ export type ConnectionWithProfile = {
 }
 
 export default async function MessagesPage() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient(); // FIX: No argument needed
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/login');
@@ -70,7 +68,6 @@ export default async function MessagesPage() {
         <h1 className="text-3xl font-bold text-gray-800">Messages</h1>
       </div>
       
-      {/* The main messaging UI will be a client component */}
       <div className="flex-grow h-full">
          <MessagingClient connections={allConnections} currentUserId={session.user.id} />
       </div>

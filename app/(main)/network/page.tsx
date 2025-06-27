@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Users } from 'lucide-react';
 import { Database } from '@/lib/database.types';
@@ -9,13 +8,11 @@ export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Connection = Database['public']['Tables']['connections']['Row'];
 
 export default async function NetworkPage() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient(); // FIX: No argument needed
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/login');
 
-  // 1. Get all of the current user's connections (sent or received)
   const { data: connections, error: connectionsError } = await supabase
     .from('connections')
     .select('requester_id, addressee_id, status')
@@ -26,14 +23,11 @@ export default async function NetworkPage() {
     return <div>Error loading network.</div>;
   }
 
-  // Create a set of user IDs the current user is already connected with or has a pending request with.
   const connectedUserIds = new Set(
     (connections || []).flatMap(c => [c.requester_id, c.addressee_id])
   );
-  // Also add the current user's own ID to the set to exclude them from the list.
   connectedUserIds.add(session.user.id);
 
-  // 2. Get all profiles *not* in the connectedUserIds set.
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
     .select('*')

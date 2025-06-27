@@ -1,12 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { FileText, Award } from 'lucide-react'; // <-- Import Award icon
+import { FileText, Award } from 'lucide-react';
 import PortfolioView from '@/components/portfolio/PortfolioView';
 import { Database } from '@/lib/database.types';
 
 export type PortfolioItem = Database['public']['Tables']['portfolio_items']['Row'];
-// Define a type for a badge with its details
 export type EarnedBadge = Database['public']['Tables']['user_badges']['Row'] & {
   badges: {
     name: string;
@@ -16,13 +14,11 @@ export type EarnedBadge = Database['public']['Tables']['user_badges']['Row'] & {
 };
 
 export default async function PortfolioPage() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient(); // FIX: No argument needed
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/login');
 
-  // Fetch portfolio items and earned badges in parallel
   const [portfolioData, badgesData] = await Promise.all([
     supabase
       .from('portfolio_items')
@@ -31,7 +27,7 @@ export default async function PortfolioPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('user_badges')
-      .select(`*, badges (name, description, icon_url)`) // <-- Fetch badge details
+      .select(`*, badges (name, description, icon_url)`)
       .eq('user_id', session.user.id)
   ]);
 
@@ -45,7 +41,6 @@ export default async function PortfolioPage() {
         <h1 className="text-3xl font-bold text-gray-800">My Portfolio</h1>
       </div>
 
-      {/* Badges Section */}
       <div className="mb-12">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
           <Award className="mr-3 text-yellow-500" />
