@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { Database } from './database.types';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -11,7 +10,6 @@ const checkProfileBadge = (badge: Badge, profile: Profile): boolean => {
         return false;
     }
     const requiredFields = badge.criteria.fields as string[];
-    // Check if all required fields in the badge criteria exist and are not empty on the user's profile
     return requiredFields.every(field => profile[field as keyof Profile]);
 };
 
@@ -46,7 +44,7 @@ const checkPortfolioBadge = async (badge: Badge, userId: string, supabase: any):
 };
 
 // Helper function to check if interest count meets badge criteria
-const checkInterestBadge = async (badge: Badge, userId: string, supabase: any): Promise<boolean> => {
+const checkInterestBadge = async (badge: Badge, userId:string, supabase: any): Promise<boolean> => {
     if (!badge.criteria || typeof badge.criteria !== 'object' || !('count' in badge.criteria)) {
         return false;
     }
@@ -60,13 +58,10 @@ const checkInterestBadge = async (badge: Badge, userId: string, supabase: any): 
     return count >= requiredCount;
 };
 
-
 // Main function to check and award badges
 export async function checkAndAwardBadges(userId: string) {
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = createClient(); // FIX: No argument needed
 
-    // 1. Get all available badges and the user's current profile data
     const { data: allBadges, error: badgesError } = await supabase.from('badges').select('*');
     const { data: userProfile, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
     
@@ -75,7 +70,6 @@ export async function checkAndAwardBadges(userId: string) {
         return;
     }
 
-    // 2. Get the badges the user has already earned
     const { data: earnedBadges, error: earnedError } = await supabase
         .from('user_badges')
         .select('badge_id')
@@ -85,13 +79,11 @@ export async function checkAndAwardBadges(userId: string) {
         console.error("Error fetching earned badges:", earnedError);
         return;
     }
-    const earnedBadgeIds = new Set(earnedBadges.map(b => b.badge_id));
+    const earnedBadgeIds = new Set((earnedBadges || []).map(b => b.badge_id));
 
-    // 3. Determine which badges to check (those not yet earned)
     const badgesToCheck = allBadges.filter(badge => !earnedBadgeIds.has(badge.id));
     const badgesToAward: number[] = [];
 
-    // 4. Loop through and check criteria for each unearned badge
     for (const badge of badgesToCheck) {
         let earned = false;
         const criteria = badge.criteria as any;
@@ -116,7 +108,6 @@ export async function checkAndAwardBadges(userId: string) {
         }
     }
 
-    // 5. Award the new badges
     if (badgesToAward.length > 0) {
         const newEarnedBadges = badgesToAward.map(badgeId => ({
             user_id: userId,
@@ -132,24 +123,19 @@ export async function checkAndAwardBadges(userId: string) {
     }
 }
 
-
 // --- Signal Score Calculation ---
-
 export async function calculateAndUpdateSignalScore(userId: string) {
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = createClient(); // FIX: No argument needed
 
-    // Define the points for each item
     const SCORE_WEIGHTS = {
-        PROFILE_FIELD: 5,   // e.g., for having a bio, headline
-        EXPERIENCE: 10,     // per experience
-        PORTFOLIO_ITEM: 15, // per portfolio item
-        BADGE: 25,          // per badge earned
+        PROFILE_FIELD: 5,
+        EXPERIENCE: 10,
+        PORTFOLIO_ITEM: 15,
+        BADGE: 25,
     };
 
     let totalScore = 0;
 
-    // 1. Fetch all necessary user data in parallel
     const [profileData, experiencesCount, portfolioCount, badgesCount] = await Promise.all([
         supabase.from('profiles').select('bio, headline').eq('id', userId).single(),
         supabase.from('experiences').select('*', { count: 'exact', head: true }).eq('user_id', userId),
@@ -157,16 +143,13 @@ export async function calculateAndUpdateSignalScore(userId: string) {
         supabase.from('user_badges').select('*', { count: 'exact', head: true }).eq('user_id', userId),
     ]);
 
-    // 2. Calculate score from profile completeness
     if (profileData.data?.bio) totalScore += SCORE_WEIGHTS.PROFILE_FIELD;
     if (profileData.data?.headline) totalScore += SCORE_WEIGHTS.PROFILE_FIELD;
 
-    // 3. Calculate score from counts
     totalScore += (experiencesCount.count || 0) * SCORE_WEIGHTS.EXPERIENCE;
     totalScore += (portfolioCount.count || 0) * SCORE_WEIGHTS.PORTFOLIO_ITEM;
     totalScore += (badgesCount.count || 0) * SCORE_WEIGHTS.BADGE;
 
-    // 4. Update the score in the database
     const { error } = await supabase
         .from('profiles')
         .update({ signal_score: totalScore })
