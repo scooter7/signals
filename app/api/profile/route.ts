@@ -17,14 +17,11 @@ export async function POST(request: Request) {
   const { full_name, username, headline, bio, role } = await request.json();
   const userId = session.user.id;
 
-  // 1. First, check for and award any new badges based on the incoming data.
-  // We do this first so the subsequent score calculation is accurate.
-  await checkAndAwardBadges(userId);
-  
-  // 2. Now, calculate the new signal score.
+  // Pass the supabase client to both gamification functions
+  await checkAndAwardBadges(userId, supabase);
   const newSignalScore = await calculateSignalScore(userId, supabase);
 
-  // 3. Perform a SINGLE update to the database with all new information.
+  // Perform a single update to the database with all new information
   const { error } = await supabase
     .from('profiles')
     .update({
@@ -33,7 +30,7 @@ export async function POST(request: Request) {
       headline,
       bio,
       role,
-      signal_score: newSignalScore, // Include the newly calculated score
+      signal_score: newSignalScore,
       updated_at: new Date().toISOString(),
     })
     .eq('id', userId);
@@ -43,8 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to update profile.' }, { status: 500 });
   }
 
-  // 4. Invalidate the server cache for the layout and specific pages.
-  // This ensures the next navigation loads fresh data.
+  // Invalidate the server cache to ensure fresh data is loaded on navigation
   revalidatePath('/', 'layout');
   revalidatePath('/profile');
   revalidatePath('/opportunities');

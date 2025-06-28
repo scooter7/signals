@@ -59,9 +59,8 @@ const checkInterestBadge = async (badge: Badge, userId:string, supabase: any): P
 };
 
 // Main function to check and award badges
-export async function checkAndAwardBadges(userId: string) {
-    const supabase = createClient();
-
+// FIX: This function now accepts the supabase client as an argument
+export async function checkAndAwardBadges(userId: string, supabase: any) {
     const { data: allBadges, error: badgesError } = await supabase.from('badges').select('*');
     const { data: userProfile, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
     
@@ -124,9 +123,7 @@ export async function checkAndAwardBadges(userId: string) {
 }
 
 // --- Signal Score Calculation ---
-// This function takes a Supabase client instance and returns the score.
 export async function calculateSignalScore(userId: string, supabase: any): Promise<number> {
-    
     const SCORE_WEIGHTS = {
         PROFILE_FIELD: 5,
         EXPERIENCE: 10,
@@ -150,6 +147,5 @@ export async function calculateSignalScore(userId: string, supabase: any): Promi
     totalScore += (portfolioCount.count || 0) * SCORE_WEIGHTS.PORTFOLIO_ITEM;
     totalScore += (badgesCount.count || 0) * SCORE_WEIGHTS.BADGE;
 
-    // Return the calculated score instead of updating the DB here
     return totalScore;
 }
