@@ -469,6 +469,7 @@ export type Database = {
       user_role:
         | "high_school_student"
         | "college_student"
+        | "job_seeker"
         | "college_recruiter"
         | "corporate_recruiter"
     }
@@ -608,6 +609,7 @@ export const Constants = {
       user_role: [
         "high_school_student",
         "college_student",
+        "job_seeker",
         "college_recruiter",
         "corporate_recruiter",
       ],

@@ -8,20 +8,22 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// NEW FUNCTION: Formats the role enum for display
 export function formatUserRole(role: UserRole | null | undefined): string {
-    if (!role) return 'Member'; // A sensible default
+    if (!role) return 'Member';
     
     switch (role) {
         case 'high_school_student':
             return 'High School Student';
         case 'college_student':
             return 'College Student';
+        case 'job_seeker':
+            return 'Job Seeker';
         case 'college_recruiter':
             return 'College Administrator';
         case 'corporate_recruiter':
             return 'Corporate Talent Seeker';
         default:
-            return 'Member';
+            const formatted = role.replace(/_/g, ' ');
+            return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     }
 }
