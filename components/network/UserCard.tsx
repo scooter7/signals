@@ -6,6 +6,7 @@ import { Profile } from '@/app/(main)/network/page';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { UserPlus, CheckCircle } from 'lucide-react';
+import { formatUserRole } from '@/lib/utils'; // <-- Import the new helper function
 
 export default function UserCard({ profile }: { profile: Profile }) {
   const router = useRouter();
@@ -23,8 +24,6 @@ export default function UserCard({ profile }: { profile: Profile }) {
 
     if (response.ok) {
         setIsRequested(true);
-        // Optionally, you could remove the card from the UI instead of just disabling the button
-        // router.refresh(); 
     } else {
         const { error } = await response.json();
         alert(error || 'Failed to send connection request.');
@@ -42,7 +41,8 @@ export default function UserCard({ profile }: { profile: Profile }) {
             />
         </div>
         <CardTitle>{profile.full_name}</CardTitle>
-        <CardDescription className="capitalize">{profile.role}</CardDescription>
+        {/* Use the helper function to display the role nicely */}
+        <CardDescription>{formatUserRole(profile.role)}</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
         <p className="text-sm text-gray-600 truncate">{profile.headline || 'No headline provided.'}</p>
