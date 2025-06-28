@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Home, User, Briefcase, Users, MessageSquare, LogOut, FileText, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Logo } from '@/components/ui/Logo'; // <-- Import the new Logo component
+import { Logo } from '@/components/ui/Logo';
+import { formatUserRole } from '@/lib/utils';
 
 export default async function MainLayout({
   children,
@@ -12,18 +13,16 @@ export default async function MainLayout({
 }) {
   const supabase = createClient();
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
+  // FIX: Use getUser() for a secure, server-validated session
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     redirect('/login');
   }
 
   const { data: profile } = await supabase
     .from('profiles')
     .select(`full_name, role, avatar_url`)
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single();
 
   const navLinks = [
@@ -42,7 +41,7 @@ export default async function MainLayout({
       <aside className="w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col">
         <div className="h-16 flex items-center justify-center border-b border-gray-200 px-4">
           <Link href="/dashboard">
-            <Logo /> {/* <-- Use the Logo component */}
+            <Logo />
           </Link>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-2">
@@ -72,7 +71,7 @@ export default async function MainLayout({
           <div className="flex items-center">
             <div className="text-right mr-4">
               <p className="font-semibold text-gray-800">{profile?.full_name || 'User'}</p>
-              <p className="text-sm text-gray-500 capitalize">{profile?.role || 'Student'}</p>
+              <p className="text-sm text-gray-500">{formatUserRole(profile?.role)}</p>
             </div>
             <img
               src={profile?.avatar_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${profile?.full_name?.charAt(0) || 'U'}`}
