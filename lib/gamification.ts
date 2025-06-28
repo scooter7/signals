@@ -80,7 +80,6 @@ export async function checkAndAwardBadges(userId: string, supabase: any) {
     
     const earnedBadgeIds = new Set((earnedBadges || []).map((b: { badge_id: number }) => b.badge_id));
 
-    // FIX: Explicitly type the 'badge' parameter in the filter function.
     const badgesToCheck = allBadges.filter((badge: Badge) => !earnedBadgeIds.has(badge.id));
     const badgesToAward: number[] = [];
 
@@ -130,15 +129,18 @@ export async function calculateSignalScore(userId: string, supabase: any): Promi
         EXPERIENCE: 10,
         PORTFOLIO_ITEM: 15,
         BADGE: 25,
+        MESSAGE_SENT: 1, // <-- Add points for sending messages
     };
 
     let totalScore = 0;
 
-    const [profileData, experiencesCount, portfolioCount, badgesCount] = await Promise.all([
+    // Fetch all data in parallel, now including sent messages
+    const [profileData, experiencesCount, portfolioCount, badgesCount, messagesCount] = await Promise.all([
         supabase.from('profiles').select('bio, headline').eq('id', userId).single(),
         supabase.from('experiences').select('*', { count: 'exact', head: true }).eq('user_id', userId),
         supabase.from('portfolio_items').select('*', { count: 'exact', head: true }).eq('user_id', userId),
         supabase.from('user_badges').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+        supabase.from('messages').select('*', { count: 'exact', head: true }).eq('sender_id', userId), // <-- Get count of sent messages
     ]);
 
     if (profileData.data?.bio) totalScore += SCORE_WEIGHTS.PROFILE_FIELD;
@@ -147,6 +149,7 @@ export async function calculateSignalScore(userId: string, supabase: any): Promi
     totalScore += (experiencesCount.count || 0) * SCORE_WEIGHTS.EXPERIENCE;
     totalScore += (portfolioCount.count || 0) * SCORE_WEIGHTS.PORTFOLIO_ITEM;
     totalScore += (badgesCount.count || 0) * SCORE_WEIGHTS.BADGE;
+    totalScore += (messagesCount.count || 0) * SCORE_WEIGHTS.MESSAGE_SENT; // <-- Add message score
 
     return totalScore;
 }

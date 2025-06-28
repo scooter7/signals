@@ -34,8 +34,6 @@ export default function MessagingClient({ connections, currentUserId }: { connec
 
       const otherUserId = selectedConnection.profile.id;
 
-      // --- FIX: This is the corrected database query ---
-      // It explicitly looks for messages between the two users.
       const { data, error } = await supabase
         .from('messages')
         .select('*')
@@ -46,7 +44,6 @@ export default function MessagingClient({ connections, currentUserId }: { connec
 
       if (error) {
         console.error('Error fetching messages:', error);
-        // Display an error to the user if fetching fails
         alert(`Could not load messages: ${error.message}`);
       } else {
         setMessages(data || []);
@@ -114,6 +111,10 @@ export default function MessagingClient({ connections, currentUserId }: { connec
       setMessages(prevMessages => prevMessages.filter(m => m.id !== optimisticMessage.id));
       alert("Failed to send message. Please try again.");
       setNewMessage(optimisticMessage.content || '');
+    } else {
+      // After successfully sending a message, trigger a score update.
+      // We don't need to wait for this to finish, so we don't use await.
+      fetch('/api/trigger-score-update', { method: 'POST' });
     }
   };
 
