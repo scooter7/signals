@@ -60,7 +60,7 @@ const checkInterestBadge = async (badge: Badge, userId:string, supabase: any): P
 
 // Main function to check and award badges
 export async function checkAndAwardBadges(userId: string) {
-    const supabase = createClient(); // FIX: No argument needed
+    const supabase = createClient();
 
     const { data: allBadges, error: badgesError } = await supabase.from('badges').select('*');
     const { data: userProfile, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
@@ -124,9 +124,9 @@ export async function checkAndAwardBadges(userId: string) {
 }
 
 // --- Signal Score Calculation ---
-export async function calculateAndUpdateSignalScore(userId: string) {
-    const supabase = createClient(); // FIX: No argument needed
-
+// This function takes a Supabase client instance and returns the score.
+export async function calculateSignalScore(userId: string, supabase: any): Promise<number> {
+    
     const SCORE_WEIGHTS = {
         PROFILE_FIELD: 5,
         EXPERIENCE: 10,
@@ -150,14 +150,6 @@ export async function calculateAndUpdateSignalScore(userId: string) {
     totalScore += (portfolioCount.count || 0) * SCORE_WEIGHTS.PORTFOLIO_ITEM;
     totalScore += (badgesCount.count || 0) * SCORE_WEIGHTS.BADGE;
 
-    const { error } = await supabase
-        .from('profiles')
-        .update({ signal_score: totalScore })
-        .eq('id', userId);
-
-    if (error) {
-        console.error("Error updating signal score:", error);
-    } else {
-        console.log(`Updated signal score for user ${userId} to ${totalScore}`);
-    }
+    // Return the calculated score instead of updating the DB here
+    return totalScore;
 }
