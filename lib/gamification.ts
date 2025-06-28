@@ -78,10 +78,10 @@ export async function checkAndAwardBadges(userId: string, supabase: any) {
         return;
     }
     
-    // FIX: Explicitly type the 'b' parameter in the map function.
     const earnedBadgeIds = new Set((earnedBadges || []).map((b: { badge_id: number }) => b.badge_id));
 
-    const badgesToCheck = allBadges.filter(badge => !earnedBadgeIds.has(badge.id));
+    // FIX: Explicitly type the 'badge' parameter in the filter function.
+    const badgesToCheck = allBadges.filter((badge: Badge) => !earnedBadgeIds.has(badge.id));
     const badgesToAward: number[] = [];
 
     for (const badge of badgesToCheck) {
