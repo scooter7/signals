@@ -5,6 +5,7 @@ import { Database } from '@/lib/database.types';
 import UserCard from '@/components/network/UserCard';
 import ConnectionList from '@/components/network/ConnectionList';
 
+// Define types
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type ConnectionWithProfile = Database['public']['Tables']['connections']['Row'] & {
   requester: Profile;
@@ -19,8 +20,10 @@ export default async function NetworkPage() {
 
   const currentUserId = session.user.id;
 
-  // 1. Fetch all connections related to the current user
-  const { data: connections, error: connectionsError } = await supabase
+  // --- START: REVISED LOGIC ---
+
+  // 1. Fetch all connections related to the current user to populate the top sections
+  const { data: allConnections, error: connectionsError } = await supabase
     .from('connections')
     .select(`
       *,
@@ -34,19 +37,30 @@ export default async function NetworkPage() {
     return <div>Error loading network.</div>;
   }
 
-  // 2. Filter connections into different lists
-  const incomingRequests = connections.filter(c => c.addressee_id === currentUserId && c.status === 'pending');
-  const outgoingRequests = connections.filter(c => c.requester_id === currentUserId && c.status === 'pending');
-  const acceptedConnections = connections.filter(c => c.status === 'accepted');
-
-  // 3. Get profiles for the "Discover" section (users with no connection status)
-  const connectedUserIds = new Set(connections.flatMap(c => [c.requester_id, c.addressee_id]));
-  connectedUserIds.add(currentUserId);
-
-  const { data: discoverProfiles, error: profilesError } = await supabase
+  // 2. Fetch ALL other user profiles from the database
+  const { data: allOtherProfiles, error: profilesError } = await supabase
     .from('profiles')
     .select('*')
-    .not('id', 'in', `(${Array.from(connectedUserIds).map(id => `'${id}'`).join(',')})`);
+    .neq('id', currentUserId);
+
+  if (profilesError) {
+    console.error('Error fetching profiles:', profilesError);
+    return <div>Error loading network.</div>;
+  }
+
+  // 3. Create a Set of IDs for users who are already in a connection (pending, accepted, etc.)
+  const connectedUserIds = new Set(
+    (allConnections || []).flatMap(c => [c.requester_id, c.addressee_id])
+  );
+
+  // 4. Filter the profiles in JavaScript to find users you have NO connection with
+  const discoverProfiles = (allOtherProfiles || []).filter(p => !connectedUserIds.has(p.id));
+  
+  // --- END: REVISED LOGIC ---
+
+  // Filter connections into different lists for the UI
+  const incomingRequests = (allConnections || []).filter(c => c.addressee_id === currentUserId && c.status === 'pending');
+  const acceptedConnections = (allConnections || []).filter(c => c.status === 'accepted');
 
   return (
     <div className="space-y-12">
@@ -75,18 +89,16 @@ export default async function NetworkPage() {
           Discover New Connections
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {(discoverProfiles || []).map(profile => (
+          {discoverProfiles.map(profile => (
             <UserCard key={profile.id} profile={profile} />
           ))}
-          {(discoverProfiles || []).length === 0 && (
+          {discoverProfiles.length === 0 && (
               <div className="col-span-full text-center py-12">
                   <p className="text-gray-500">No new users to connect with right now.</p>
               </div>
           )}
         </div>
       </div>
-      
-      {/* You could also add a section for outgoing requests if desired */}
     </div>
   );
 }
