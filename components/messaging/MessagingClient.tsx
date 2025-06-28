@@ -42,25 +42,34 @@ export default function MessagingClient({ connections, currentUserId }: { connec
     fetchMessages();
   }, [selectedConnection, currentUserId, supabase]);
   
-  // Effect for real-time message subscription
+  // --- REVISED Real-time message subscription ---
   useEffect(() => {
+    // Listen for new messages specifically sent TO the current user
     const channel = supabase
-      .channel('public:messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        const newMessagePayload = payload.new as Message;
-        // Only add the message if it belongs to the currently selected conversation
-        if (selectedConnection && 
-           ((newMessagePayload.sender_id === currentUserId && newMessagePayload.receiver_id === selectedConnection.profile.id) || 
-            (newMessagePayload.sender_id === selectedConnection.profile.id && newMessagePayload.receiver_id === currentUserId))) {
-                setMessages((prevMessages) => [...prevMessages, newMessagePayload]);
+      .channel(`realtime-messages-for-${currentUserId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${currentUserId}`, // <-- Efficient server-side filter
+        },
+        (payload) => {
+          const newMessagePayload = payload.new as Message;
+          // If the new message is from the person we're currently chatting with, add it to the view
+          if (selectedConnection && newMessagePayload.sender_id === selectedConnection.profile.id) {
+            setMessages((prevMessages) => [...prevMessages, newMessagePayload]);
+          }
+          // (In the future, you could add a notification here for messages from other users)
         }
-      })
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, selectedConnection, currentUserId]);
+  }, [supabase, selectedConnection, currentUserId]); // Re-run when the selected chat changes
 
   useEffect(() => {
     scrollToBottom();
@@ -71,16 +80,35 @@ export default function MessagingClient({ connections, currentUserId }: { connec
     e.preventDefault();
     if (!newMessage.trim() || !selectedConnection) return;
 
+    const optimisticMessage: Message = {
+        id: Date.now(), // Temporary ID
+        sender_id: currentUserId,
+        receiver_id: selectedConnection.profile.id,
+        content: newMessage.trim(),
+        file_url: null,
+        is_read: false,
+        created_at: new Date().toISOString(),
+    };
+
+    // --- Optimistic UI Update ---
+    // Add the message to our own screen immediately for a snappy feel.
+    setMessages(prevMessages => [...prevMessages, optimisticMessage]);
+    setNewMessage('');
+
+    // Send the actual message to the database in the background
     const { error } = await supabase.from('messages').insert({
       sender_id: currentUserId,
       receiver_id: selectedConnection.profile.id,
-      content: newMessage.trim(),
+      content: optimisticMessage.content,
     });
 
     if (error) {
       console.error('Error sending message:', error);
-    } else {
-      setNewMessage('');
+      // If the message failed to send, remove the optimistic message
+      // and show an error to the user.
+      setMessages(prevMessages => prevMessages.filter(m => m.id !== optimisticMessage.id));
+      alert("Failed to send message. Please try again.");
+      setNewMessage(optimisticMessage.content || ''); // Put the message back in the input
     }
   };
 
