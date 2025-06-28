@@ -7,7 +7,12 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        // Add the sans-serif font from our layout
+        sans: ['var(--font-inter)'],
+      },
+    },
   },
   plugins: [require("tailwindcss-animate")],
 };

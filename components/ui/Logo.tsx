@@ -15,15 +15,11 @@ export function Logo({ className }: { className?: string }) {
           <stop offset="100%" style={{ stopColor: '#8b5cf6', stopOpacity: 1 }} />
         </linearGradient>
       </defs>
-      <style>
-        {`
-          @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
-        `}
-      </style>
+      {/* The font is now applied via a CSS variable from the layout file */}
       <text
         x="0"
         y="28"
-        fontFamily="Poppins, sans-serif"
+        fontFamily="var(--font-poppins), sans-serif"
         fontSize="24"
         fontWeight="600"
         fill="url(#logoGradient)"
