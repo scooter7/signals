@@ -17,8 +17,6 @@ export default function MessagingClient({ connections, currentUserId }: { connec
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
-  // Use a ref to hold the current selected connection. This allows the subscription
-  // callback to access the latest value without being part of the useEffect dependency array.
   const selectedConnectionRef = useRef<ConnectionWithProfile | null>(null);
   selectedConnectionRef.current = selectedConnection;
 
@@ -30,19 +28,26 @@ export default function MessagingClient({ connections, currentUserId }: { connec
   useEffect(() => {
     const fetchMessages = async () => {
       if (!selectedConnection) {
-        setMessages([]); // Clear messages when no conversation is selected
+        setMessages([]);
         return;
       }
 
       const otherUserId = selectedConnection.profile.id;
+
+      // --- FIX: This is the corrected database query ---
+      // It explicitly looks for messages between the two users.
       const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .or(`(sender_id.eq.${currentUserId},receiver_id.eq.${otherUserId}),(sender_id.eq.${otherUserId},receiver_id.eq.${currentUserId})`)
+        .or(
+          `and(sender_id.eq.${currentUserId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${currentUserId})`
+        )
         .order('created_at', { ascending: true });
 
       if (error) {
         console.error('Error fetching messages:', error);
+        // Display an error to the user if fetching fails
+        alert(`Could not load messages: ${error.message}`);
       } else {
         setMessages(data || []);
       }
@@ -50,8 +55,7 @@ export default function MessagingClient({ connections, currentUserId }: { connec
     fetchMessages();
   }, [selectedConnection, currentUserId, supabase]);
   
-  // --- REVISED Real-time message subscription ---
-  // This useEffect runs only ONCE when the component mounts.
+  // Real-time message subscription
   useEffect(() => {
     const channel = supabase
       .channel(`realtime-messages-for-${currentUserId}`)
@@ -65,26 +69,18 @@ export default function MessagingClient({ connections, currentUserId }: { connec
         },
         (payload) => {
           const newMessagePayload = payload.new as Message;
-          
-          // Check if the incoming message belongs to the currently active chat window.
-          // We use the ref here to get the most up-to-date value of the selected connection.
           if (selectedConnectionRef.current && newMessagePayload.sender_id === selectedConnectionRef.current.profile.id) {
             setMessages((prevMessages) => [...prevMessages, newMessagePayload]);
-          } else {
-            // Optional: If the message is for another chat, you could show a notification.
-            console.log('Received a message for a different conversation.');
           }
         }
       )
       .subscribe();
 
-    // Cleanup function to remove the channel when the component unmounts.
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, currentUserId]); // This dependency array is stable and won't cause re-subscriptions.
+  }, [supabase, currentUserId]);
 
-  // Scroll to bottom whenever the messages array changes.
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
