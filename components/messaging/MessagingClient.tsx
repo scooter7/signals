@@ -17,6 +17,11 @@ export default function MessagingClient({ connections, currentUserId }: { connec
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
+  // Use a ref to hold the current selected connection. This allows the subscription
+  // callback to access the latest value without being part of the useEffect dependency array.
+  const selectedConnectionRef = useRef<ConnectionWithProfile | null>(null);
+  selectedConnectionRef.current = selectedConnection;
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -24,7 +29,10 @@ export default function MessagingClient({ connections, currentUserId }: { connec
   // Effect to fetch messages when a conversation is selected
   useEffect(() => {
     const fetchMessages = async () => {
-      if (!selectedConnection) return;
+      if (!selectedConnection) {
+        setMessages([]); // Clear messages when no conversation is selected
+        return;
+      }
 
       const otherUserId = selectedConnection.profile.id;
       const { data, error } = await supabase
@@ -43,8 +51,8 @@ export default function MessagingClient({ connections, currentUserId }: { connec
   }, [selectedConnection, currentUserId, supabase]);
   
   // --- REVISED Real-time message subscription ---
+  // This useEffect runs only ONCE when the component mounts.
   useEffect(() => {
-    // Listen for new messages specifically sent TO the current user
     const channel = supabase
       .channel(`realtime-messages-for-${currentUserId}`)
       .on(
@@ -53,24 +61,30 @@ export default function MessagingClient({ connections, currentUserId }: { connec
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `receiver_id=eq.${currentUserId}`, // <-- Efficient server-side filter
+          filter: `receiver_id=eq.${currentUserId}`,
         },
         (payload) => {
           const newMessagePayload = payload.new as Message;
-          // If the new message is from the person we're currently chatting with, add it to the view
-          if (selectedConnection && newMessagePayload.sender_id === selectedConnection.profile.id) {
+          
+          // Check if the incoming message belongs to the currently active chat window.
+          // We use the ref here to get the most up-to-date value of the selected connection.
+          if (selectedConnectionRef.current && newMessagePayload.sender_id === selectedConnectionRef.current.profile.id) {
             setMessages((prevMessages) => [...prevMessages, newMessagePayload]);
+          } else {
+            // Optional: If the message is for another chat, you could show a notification.
+            console.log('Received a message for a different conversation.');
           }
-          // (In the future, you could add a notification here for messages from other users)
         }
       )
       .subscribe();
 
+    // Cleanup function to remove the channel when the component unmounts.
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, selectedConnection, currentUserId]); // Re-run when the selected chat changes
+  }, [supabase, currentUserId]); // This dependency array is stable and won't cause re-subscriptions.
 
+  // Scroll to bottom whenever the messages array changes.
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -81,7 +95,7 @@ export default function MessagingClient({ connections, currentUserId }: { connec
     if (!newMessage.trim() || !selectedConnection) return;
 
     const optimisticMessage: Message = {
-        id: Date.now(), // Temporary ID
+        id: Date.now(),
         sender_id: currentUserId,
         receiver_id: selectedConnection.profile.id,
         content: newMessage.trim(),
@@ -90,12 +104,9 @@ export default function MessagingClient({ connections, currentUserId }: { connec
         created_at: new Date().toISOString(),
     };
 
-    // --- Optimistic UI Update ---
-    // Add the message to our own screen immediately for a snappy feel.
     setMessages(prevMessages => [...prevMessages, optimisticMessage]);
     setNewMessage('');
 
-    // Send the actual message to the database in the background
     const { error } = await supabase.from('messages').insert({
       sender_id: currentUserId,
       receiver_id: selectedConnection.profile.id,
@@ -104,11 +115,9 @@ export default function MessagingClient({ connections, currentUserId }: { connec
 
     if (error) {
       console.error('Error sending message:', error);
-      // If the message failed to send, remove the optimistic message
-      // and show an error to the user.
       setMessages(prevMessages => prevMessages.filter(m => m.id !== optimisticMessage.id));
       alert("Failed to send message. Please try again.");
-      setNewMessage(optimisticMessage.content || ''); // Put the message back in the input
+      setNewMessage(optimisticMessage.content || '');
     }
   };
 
