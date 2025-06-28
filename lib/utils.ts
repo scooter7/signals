@@ -11,6 +11,8 @@ export function cn(...inputs: ClassValue[]) {
 export function formatUserRole(role: UserRole | null | undefined): string {
     if (!role) return 'Member';
     
+    // The switch statement covers all possible cases for the UserRole type.
+    // The 'default' case was removed because TypeScript correctly identified it as unreachable.
     switch (role) {
         case 'high_school_student':
             return 'High School Student';
@@ -22,8 +24,5 @@ export function formatUserRole(role: UserRole | null | undefined): string {
             return 'College Administrator';
         case 'corporate_recruiter':
             return 'Corporate Talent Seeker';
-        default:
-            const formatted = role.replace(/_/g, ' ');
-            return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     }
 }
