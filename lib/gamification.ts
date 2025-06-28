@@ -59,7 +59,6 @@ const checkInterestBadge = async (badge: Badge, userId:string, supabase: any): P
 };
 
 // Main function to check and award badges
-// FIX: This function now accepts the supabase client as an argument
 export async function checkAndAwardBadges(userId: string, supabase: any) {
     const { data: allBadges, error: badgesError } = await supabase.from('badges').select('*');
     const { data: userProfile, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
@@ -78,7 +77,9 @@ export async function checkAndAwardBadges(userId: string, supabase: any) {
         console.error("Error fetching earned badges:", earnedError);
         return;
     }
-    const earnedBadgeIds = new Set((earnedBadges || []).map(b => b.badge_id));
+    
+    // FIX: Explicitly type the 'b' parameter in the map function.
+    const earnedBadgeIds = new Set((earnedBadges || []).map((b: { badge_id: number }) => b.badge_id));
 
     const badgesToCheck = allBadges.filter(badge => !earnedBadgeIds.has(badge.id));
     const badgesToAward: number[] = [];
