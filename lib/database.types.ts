@@ -504,6 +504,7 @@ export type Database = {
         | "badge_earned"
         | "connection_accepted"
         | "opportunity_posted"
+        | "ai_advisor_used"
       connection_status: "pending" | "accepted" | "declined" | "blocked"
       experience_type:
         | "academic"
@@ -649,6 +650,7 @@ export const Constants = {
         "badge_earned",
         "connection_accepted",
         "opportunity_posted",
+        "ai_advisor_used",
       ],
       connection_status: ["pending", "accepted", "declined", "blocked"],
       experience_type: [
