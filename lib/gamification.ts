@@ -1,3 +1,4 @@
+// scooter7/signals/signals-e14ad08976b81031ca9347e5cf5e70b329218bfc/lib/gamification.ts
 import { createClient } from '@/lib/supabase/server';
 import { Database } from './database.types';
 
@@ -129,18 +130,20 @@ export async function calculateSignalScore(userId: string, supabase: any): Promi
         EXPERIENCE: 10,
         PORTFOLIO_ITEM: 15,
         BADGE: 25,
-        MESSAGE_SENT: 1, // <-- Add points for sending messages
+        MESSAGE_SENT: 1,
+        AI_ADVISOR_USED: 2,
     };
 
     let totalScore = 0;
 
     // Fetch all data in parallel, now including sent messages
-    const [profileData, experiencesCount, portfolioCount, badgesCount, messagesCount] = await Promise.all([
+    const [profileData, experiencesCount, portfolioCount, badgesCount, messagesCount, aiUsesCount] = await Promise.all([
         supabase.from('profiles').select('bio, headline').eq('id', userId).single(),
         supabase.from('experiences').select('*', { count: 'exact', head: true }).eq('user_id', userId),
         supabase.from('portfolio_items').select('*', { count: 'exact', head: true }).eq('user_id', userId),
         supabase.from('user_badges').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-        supabase.from('messages').select('*', { count: 'exact', head: true }).eq('sender_id', userId), // <-- Get count of sent messages
+        supabase.from('messages').select('*', { count: 'exact', head: true }).eq('sender_id', userId),
+        supabase.from('activity_feed').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('event_type', 'ai_advisor_used'),
     ]);
 
     if (profileData.data?.bio) totalScore += SCORE_WEIGHTS.PROFILE_FIELD;
@@ -149,7 +152,8 @@ export async function calculateSignalScore(userId: string, supabase: any): Promi
     totalScore += (experiencesCount.count || 0) * SCORE_WEIGHTS.EXPERIENCE;
     totalScore += (portfolioCount.count || 0) * SCORE_WEIGHTS.PORTFOLIO_ITEM;
     totalScore += (badgesCount.count || 0) * SCORE_WEIGHTS.BADGE;
-    totalScore += (messagesCount.count || 0) * SCORE_WEIGHTS.MESSAGE_SENT; // <-- Add message score
+    totalScore += (messagesCount.count || 0) * SCORE_WEIGHTS.MESSAGE_SENT;
+    totalScore += (aiUsesCount.count || 0) * SCORE_WEIGHTS.AI_ADVISOR_USED;
 
     return totalScore;
 }

@@ -1,3 +1,4 @@
+// scooter7/signals/signals-e14ad08976b81031ca9347e5cf5e70b329218bfc/lib/database.types.ts
 export type Json =
   | string
   | number
@@ -505,6 +506,7 @@ export type Database = {
         | "connection_accepted"
         | "opportunity_posted"
         | "ai_advisor_used"
+        | "message_sent"
       connection_status: "pending" | "accepted" | "declined" | "blocked"
       experience_type:
         | "academic"
@@ -651,6 +653,7 @@ export const Constants = {
         "connection_accepted",
         "opportunity_posted",
         "ai_advisor_used",
+        "message_sent",
       ],
       connection_status: ["pending", "accepted", "declined", "blocked"],
       experience_type: [
