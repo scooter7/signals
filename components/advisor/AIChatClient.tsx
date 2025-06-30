@@ -52,14 +52,16 @@ export default function AIChatClient({ userProfile }: { userProfile: FullUserPro
     setIsLoading(true);
     setInput('');
 
+    // --- ADD THIS ---
+    // Log the activity as soon as the user asks a question.
+    // This is a "fire-and-forget" call; we don't wait for it to finish.
+    fetch('/api/log-ai-activity', { method: 'POST' });
+    // --- END ---
+
     const fullPrompt = constructPrompt(input);
     
     // --- Gemini API Call ---
     try {
-      // NOTE: This is an insecure way to call the API from the client.
-      // For a real production app, you would create an API route in Next.js
-      // that calls the Gemini API from the server, protecting your key.
-      // This client-side approach is for demonstration purposes.
       const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY; 
       if (!apiKey) {
           throw new Error("API Key not found. Please add NEXT_PUBLIC_GEMINI_API_KEY to your environment variables.");

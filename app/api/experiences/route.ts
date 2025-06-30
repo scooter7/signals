@@ -58,17 +58,9 @@ export async function PATCH(request: Request) {
     const { error } = await supabase.from('experiences').update(updateData).eq('id', id).eq('user_id', userId);
     if (error) return NextResponse.json({ error: 'Failed to update experience.' }, { status: 500 });
 
-    // --- Activity Logging & Scoring ---
-    // Note: For updates, you might want a different event description.
-    await supabase.from('activity_feed').insert({
-        user_id: userId,
-        event_type: 'profile_updated', // Using a generic update event
-        event_description: `updated an experience: ${updateData.title}`
-    });
     await checkAndAwardBadges(userId, supabase);
     const newSignalScore = await calculateSignalScore(userId, supabase);
     await supabase.from('profiles').update({ signal_score: newSignalScore }).eq('id', userId);
-    // --- End Logic ---
 
     revalidatePath('/experiences');
     revalidatePath('/dashboard');
@@ -88,11 +80,9 @@ export async function DELETE(request: Request) {
     const { error } = await supabase.from('experiences').delete().eq('id', id).eq('user_id', userId);
     if (error) return NextResponse.json({ error: 'Failed to delete experience.' }, { status: 500 });
 
-    // --- Scoring Logic (No activity log on delete) ---
     await checkAndAwardBadges(userId, supabase);
     const newSignalScore = await calculateSignalScore(userId, supabase);
     await supabase.from('profiles').update({ signal_score: newSignalScore }).eq('id', userId);
-    // --- End Logic ---
 
     revalidatePath('/experiences');
     revalidatePath('/dashboard');
