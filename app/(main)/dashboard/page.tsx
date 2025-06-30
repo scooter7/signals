@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { TrendingUp, Newspaper, Users, UserCheck } from 'lucide-react'; // Import new icons
+import { TrendingUp, Newspaper, UserCheck } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 
@@ -7,15 +7,15 @@ export default async function DashboardPage() {
   const supabase = createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null; // Or redirect
+  if (!user) return null;
 
-  // Fetch profile and activity feed in parallel
   const [profileData, activityData] = await Promise.all([
     supabase.from('profiles').select('full_name, signal_score').eq('id', user.id).single(),
     supabase.from('activity_feed')
-      .select('*, profiles(full_name, avatar_url)')
+      // FIX: Explicitly tell Supabase to join profiles via the user_id column.
+      .select('*, profiles:user_id(full_name, avatar_url)')
       .order('created_at', { ascending: false })
-      .limit(5) // Get the 5 most recent activities
+      .limit(5)
   ]);
   
   const profile = profileData.data;
@@ -78,7 +78,6 @@ export default async function DashboardPage() {
                     <UserCheck className="w-6 h-6 mr-3 text-purple-500" />
                     <h2 className="font-semibold text-lg">Recommended Connections</h2>
                 </div>
-                {/* We will build the logic for this next */}
                 <p className="text-sm text-gray-500">No recommendations yet.</p>
             </div>
         </div>
