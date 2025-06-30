@@ -34,6 +34,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_feed: {
+        Row: {
+          created_at: string | null
+          event_description: string
+          event_type: Database["public"]["Enums"]["activity_event_type"]
+          id: number
+          related_url: string | null
+          related_user_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_description: string
+          event_type: Database["public"]["Enums"]["activity_event_type"]
+          id?: number
+          related_url?: string | null
+          related_user_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_description?: string
+          event_type?: Database["public"]["Enums"]["activity_event_type"]
+          id?: number
+          related_url?: string | null
+          related_user_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_feed_related_user_id_fkey"
+            columns: ["related_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_feed_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       badges: {
         Row: {
           criteria: Json | null
@@ -452,6 +497,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      activity_event_type:
+        | "profile_updated"
+        | "experience_added"
+        | "portfolio_item_added"
+        | "badge_earned"
+        | "connection_accepted"
+        | "opportunity_posted"
       connection_status: "pending" | "accepted" | "declined" | "blocked"
       experience_type:
         | "academic"
@@ -590,6 +642,14 @@ export const Constants = {
   },
   public: {
     Enums: {
+      activity_event_type: [
+        "profile_updated",
+        "experience_added",
+        "portfolio_item_added",
+        "badge_earned",
+        "connection_accepted",
+        "opportunity_posted",
+      ],
       connection_status: ["pending", "accepted", "declined", "blocked"],
       experience_type: [
         "academic",
