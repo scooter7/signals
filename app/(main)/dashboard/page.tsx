@@ -12,8 +12,9 @@ export default async function DashboardPage() {
   const [profileData, activityData] = await Promise.all([
     supabase.from('profiles').select('full_name, signal_score').eq('id', user.id).single(),
     supabase.from('activity_feed')
-      // FIX: Explicitly tell Supabase to join profiles via the user_id column.
-      .select('*, profiles:user_id(full_name, avatar_url)')
+      // FIX: This is the correct syntax to tell Supabase which relationship to use.
+      // We are aliasing the result to 'profile' to avoid naming conflicts.
+      .select('*, profile:profiles!user_id(full_name, avatar_url)')
       .order('created_at', { ascending: false })
       .limit(5)
   ]);
@@ -43,10 +44,12 @@ export default async function DashboardPage() {
                     {activities && activities.length > 0 ? (
                         activities.map(activity => (
                             <div key={activity.id} className="flex items-center space-x-3">
-                                <img src={activity.profiles?.avatar_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${activity.profiles?.full_name?.charAt(0)}`} alt="avatar" className="w-10 h-10 rounded-full" />
+                                {/* FIX: Use the new 'profile' alias */}
+                                <img src={activity.profile?.avatar_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${activity.profile?.full_name?.charAt(0)}`} alt="avatar" className="w-10 h-10 rounded-full" />
                                 <div>
                                     <p className="text-sm text-gray-800">
-                                        <span className="font-semibold">{activity.profiles?.full_name}</span> {activity.event_description}
+                                        {/* FIX: Use the new 'profile' alias */}
+                                        <span className="font-semibold">{activity.profile?.full_name}</span> {activity.event_description}
                                     </p>
                                     <p className="text-xs text-gray-500">
                                         {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
