@@ -13,9 +13,11 @@ export type ConnectionWithProfile = Database['public']['Tables']['connections'][
   addressee: Profile;
 };
 
-// Define a new, more detailed type for profiles that includes interests and the new dynamic score
-export type ProfileWithInterests = Profile & {
+// Define a new, more detailed type that includes all data needed for scoring
+export type ProfileWithDetails = Profile & {
   user_interests: { interest_id: number }[];
+  experiences: { interest_id: number | null }[];
+  portfolio_items: { interest_id: number | null }[];
   compatibility_score?: number;
 };
 
@@ -27,10 +29,10 @@ export default async function NetworkPage() {
 
   const currentUserId = session.user.id;
 
-  // 1. Fetch current user's profile with interests for comparison
+  // 1. Fetch current user's full profile details for comparison
   const { data: currentUserProfile, error: currentUserError } = await supabase
     .from('profiles')
-    .select('*, user_interests(interest_id)')
+    .select('*, user_interests(interest_id), experiences(interest_id), portfolio_items(interest_id)')
     .eq('id', currentUserId)
     .single();
   
@@ -54,10 +56,10 @@ export default async function NetworkPage() {
     return <div>Error loading network.</div>;
   }
 
-  // 3. Fetch all other users and their interests
+  // 3. Fetch all other users and their full details for scoring
   const { data: allOtherProfiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('*, user_interests(interest_id)')
+    .select('*, user_interests(interest_id), experiences(interest_id), portfolio_items(interest_id)')
     .neq('id', currentUserId);
 
   if (profilesError) {
@@ -112,7 +114,7 @@ export default async function NetworkPage() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {discoverProfiles.map(profile => (
-            <UserCard key={profile.id} profile={profile as ProfileWithInterests} />
+            <UserCard key={profile.id} profile={profile as ProfileWithDetails} />
           ))}
           {discoverProfiles.length === 0 && (
               <div className="col-span-full text-center py-12">
