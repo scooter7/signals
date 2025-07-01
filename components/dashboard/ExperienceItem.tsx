@@ -7,8 +7,11 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/Button';
 import { Edit, Trash2 } from 'lucide-react';
 import ExperienceForm from './ExperienceForm';
+import { Database } from '@/lib/database.types';
 
-export default function ExperienceItem({ experience }: { experience: Experience }) {
+type Interest = Database['public']['Tables']['interests']['Row'];
+
+export default function ExperienceItem({ experience, interests }: { experience: Experience, interests: Interest[] }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -30,12 +33,15 @@ export default function ExperienceItem({ experience }: { experience: Experience 
     }
   };
 
+  const category = interests.find(i => i.id === experience.interest_id)?.name;
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border">
       {isEditing ? (
         <ExperienceForm 
           experienceToEdit={experience} 
           onFormSubmit={() => setIsEditing(false)} 
+          interests={interests}
         />
       ) : (
         <div>
@@ -47,6 +53,7 @@ export default function ExperienceItem({ experience }: { experience: Experience 
                 {format(new Date(experience.start_date), 'MMM yyyy')} -
                 {experience.is_current ? ' Present' : experience.end_date ? ` ${format(new Date(experience.end_date), 'MMM yyyy')}` : ''}
               </p>
+              {category && <p className="text-sm font-medium text-indigo-600 mt-1">{category}</p>}
               {experience.description && <p className="mt-2 text-gray-600">{experience.description}</p>}
             </div>
             <div className="flex space-x-2">

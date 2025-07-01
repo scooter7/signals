@@ -200,6 +200,7 @@ export type Database = {
           title: string
           type: Database["public"]["Enums"]["experience_type"]
           user_id: string
+          interest_id: number | null // <-- ADDED
         }
         Insert: {
           created_at?: string | null
@@ -213,6 +214,7 @@ export type Database = {
           title: string
           type: Database["public"]["Enums"]["experience_type"]
           user_id: string
+          interest_id?: number | null // <-- ADDED
         }
         Update: {
           created_at?: string | null
@@ -226,6 +228,7 @@ export type Database = {
           title?: string
           type?: Database["public"]["Enums"]["experience_type"]
           user_id?: string
+          interest_id?: number | null // <-- ADDED
         }
         Relationships: [
           {
@@ -235,6 +238,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "experiences_interest_id_fkey" // <-- ADDED
+            columns: ["interest_id"]
+            isOneToOne: false
+            referencedRelation: "interests"
+            referencedColumns: ["id"]
+          }
         ]
       }
       interests: {
@@ -357,6 +367,7 @@ export type Database = {
           thumbnail_url: string | null
           title: string
           user_id: string
+          interest_id: number | null // <-- ADDED
         }
         Insert: {
           created_at?: string | null
@@ -367,6 +378,7 @@ export type Database = {
           thumbnail_url?: string | null
           title: string
           user_id: string
+          interest_id?: number | null // <-- ADDED
         }
         Update: {
           created_at?: string | null
@@ -377,6 +389,7 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           user_id?: string
+          interest_id?: number | null // <-- ADDED
         }
         Relationships: [
           {
@@ -386,6 +399,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "portfolio_items_interest_id_fkey" // <-- ADDED
+            columns: ["interest_id"]
+            isOneToOne: false
+            referencedRelation: "interests"
+            referencedColumns: ["id"]
+          }
         ]
       }
       profiles: {

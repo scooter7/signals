@@ -7,6 +7,7 @@ import ExperienceItem from '@/components/dashboard/ExperienceItem';
 
 export type Experience = Database['public']['Tables']['experiences']['Row'];
 type ExperienceType = Database['public']['Enums']['experience_type'];
+type Interest = Database['public']['Tables']['interests']['Row'];
 
 const experienceIcons: Record<ExperienceType, React.ElementType> = {
   academic: GraduationCap,
@@ -18,19 +19,26 @@ const experienceIcons: Record<ExperienceType, React.ElementType> = {
 };
 
 export default async function ExperiencesPage() {
-  const supabase = createClient(); // FIX: No argument needed
+  const supabase = createClient();
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/login');
 
-  const { data: experiences, error } = await supabase
-    .from('experiences')
-    .select('*')
-    .eq('user_id', session.user.id)
-    .order('start_date', { ascending: false });
+  // Fetch experiences and all interests in parallel
+  const [experiencesData, interestsData] = await Promise.all([
+    supabase
+      .from('experiences')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('start_date', { ascending: false }),
+    supabase.from('interests').select('*').order('name'),
+  ]);
 
-  if (error) {
-    console.error('Error fetching experiences:', error);
+  const { data: experiences, error: experiencesError } = experiencesData;
+  const { data: interests, error: interestsError } = interestsData;
+
+  if (experiencesError || interestsError) {
+    console.error('Error fetching data:', experiencesError || interestsError);
     return <div>Error loading experiences.</div>;
   }
 
@@ -52,7 +60,7 @@ export default async function ExperiencesPage() {
       
       <div className="bg-white p-8 rounded-xl shadow-md mb-8">
         <h2 className="text-xl font-semibold mb-4">Add a New Experience</h2>
-        <ExperienceForm />
+        <ExperienceForm interests={interests || []} />
       </div>
 
       <div className="space-y-8">
@@ -66,7 +74,7 @@ export default async function ExperiencesPage() {
               </h2>
               <div className="space-y-4">
                 {exps.map(exp => (
-                  <ExperienceItem key={exp.id} experience={exp} />
+                  <ExperienceItem key={exp.id} experience={exp} interests={interests || []} />
                 ))}
               </div>
             </div>

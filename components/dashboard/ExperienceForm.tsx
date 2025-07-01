@@ -9,13 +9,15 @@ import { Database } from '@/lib/database.types';
 import { Experience } from '@/app/(main)/experiences/page';
 
 type ExperienceType = Database['public']['Enums']['experience_type'];
+type Interest = Database['public']['Tables']['interests']['Row'];
 
 interface ExperienceFormProps {
   experienceToEdit?: Experience;
-  onFormSubmit?: () => void; // Callback to close the form after editing
+  onFormSubmit?: () => void;
+  interests: Interest[]; // Pass interests for the dropdown
 }
 
-export default function ExperienceForm({ experienceToEdit, onFormSubmit }: ExperienceFormProps) {
+export default function ExperienceForm({ experienceToEdit, onFormSubmit, interests }: ExperienceFormProps) {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [type, setType] = useState<ExperienceType>('academic');
@@ -24,6 +26,7 @@ export default function ExperienceForm({ experienceToEdit, onFormSubmit }: Exper
   const [endDate, setEndDate] = useState('');
   const [isCurrent, setIsCurrent] = useState(false);
   const [description, setDescription] = useState('');
+  const [interestId, setInterestId] = useState<number | null>(null); // New state for category
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,10 +37,11 @@ export default function ExperienceForm({ experienceToEdit, onFormSubmit }: Exper
       setTitle(experienceToEdit.title);
       setType(experienceToEdit.type);
       setOrganization(experienceToEdit.organization || '');
-      setStartDate(experienceToEdit.start_date.split('T')[0]); // Format date for input
+      setStartDate(experienceToEdit.start_date.split('T')[0]);
       setEndDate(experienceToEdit.end_date ? experienceToEdit.end_date.split('T')[0] : '');
       setIsCurrent(experienceToEdit.is_current || false);
       setDescription(experienceToEdit.description || '');
+      setInterestId(experienceToEdit.interest_id); // Set initial interest
     }
   }, [experienceToEdit, isEditMode]);
 
@@ -49,6 +53,7 @@ export default function ExperienceForm({ experienceToEdit, onFormSubmit }: Exper
     setEndDate('');
     setIsCurrent(false);
     setDescription('');
+    setInterestId(null);
     setError(null);
   };
 
@@ -57,7 +62,7 @@ export default function ExperienceForm({ experienceToEdit, onFormSubmit }: Exper
     setIsSubmitting(true);
     setError(null);
 
-    const url = isEditMode ? '/api/experiences' : '/api/experiences';
+    const url = '/api/experiences';
     const method = isEditMode ? 'PATCH' : 'POST';
 
     const body = {
@@ -68,7 +73,8 @@ export default function ExperienceForm({ experienceToEdit, onFormSubmit }: Exper
       start_date: startDate,
       end_date: isCurrent ? null : endDate,
       is_current: isCurrent,
-      description
+      description,
+      interest_id: interestId, // Include interest_id in the payload
     };
 
     const response = await fetch(url, {
@@ -81,11 +87,11 @@ export default function ExperienceForm({ experienceToEdit, onFormSubmit }: Exper
 
     if (response.ok) {
       if (isEditMode && onFormSubmit) {
-        onFormSubmit(); // Close the edit form
+        onFormSubmit();
       } else {
-        resetForm(); // Reset the 'add new' form
+        resetForm();
       }
-      router.refresh(); // Refresh page data
+      router.refresh();
     } else {
       const { error } = await response.json();
       setError(error || `Failed to ${isEditMode ? 'update' : 'add'} experience.`);
@@ -102,6 +108,13 @@ export default function ExperienceForm({ experienceToEdit, onFormSubmit }: Exper
           <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
         </div>
         <div>
+          <label htmlFor="organization" className="block text-sm font-medium mb-1">Organization / School</label>
+          <Input id="organization" value={organization} onChange={(e) => setOrganization(e.target.value)} />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
           <label htmlFor="type" className="block text-sm font-medium mb-1">Type *</label>
           <select id="type" value={type} onChange={(e) => setType(e.target.value as ExperienceType)} className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
             <option value="academic">Academic</option>
@@ -112,11 +125,20 @@ export default function ExperienceForm({ experienceToEdit, onFormSubmit }: Exper
             <option value="volunteer">Volunteer</option>
           </select>
         </div>
-      </div>
-      
-      <div>
-        <label htmlFor="organization" className="block text-sm font-medium mb-1">Organization / School</label>
-        <Input id="organization" value={organization} onChange={(e) => setOrganization(e.target.value)} />
+        <div>
+          <label htmlFor="interest" className="block text-sm font-medium mb-1">Category</label>
+          <select 
+            id="interest" 
+            value={interestId || ''} 
+            onChange={(e) => setInterestId(e.target.value ? parseInt(e.target.value) : null)} 
+            className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">-- Select a Category --</option>
+            {interests.map(interest => (
+              <option key={interest.id} value={interest.id}>{interest.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

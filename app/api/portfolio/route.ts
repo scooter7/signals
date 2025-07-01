@@ -1,4 +1,3 @@
-// scooter7/signals/signals-ff56013aed11c73aa30372363d7b35c2180d897a/app/api/portfolio/route.ts
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
@@ -10,7 +9,7 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-  const { title, description, link_url } = await request.json();
+  const { title, description, link_url, interest_id } = await request.json();
   const userId = user.id;
 
   if (!title) {
@@ -19,7 +18,7 @@ export async function POST(request: Request) {
 
   const { data: newPortfolioItem, error } = await supabase
     .from('portfolio_items')
-    .insert({ user_id: userId, title, description, link_url })
+    .insert({ user_id: userId, title, description, link_url, interest_id: interest_id || null })
     .select()
     .single();
 

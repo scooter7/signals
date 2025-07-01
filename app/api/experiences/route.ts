@@ -1,4 +1,3 @@
-// scooter7/signals/signals-ff56013aed11c73aa30372363d7b35c2180d897a/app/api/experiences/route.ts
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
@@ -19,7 +18,11 @@ export async function POST(request: Request) {
 
   const { data: newExperience, error } = await supabase
     .from('experiences')
-    .insert({ ...body, user_id: userId })
+    .insert({ 
+      ...body, 
+      user_id: userId,
+      interest_id: body.interest_id || null 
+    })
     .select()
     .single();
 
@@ -56,7 +59,11 @@ export async function PATCH(request: Request) {
 
     if (!id) return NextResponse.json({ error: 'Experience ID is required.' }, { status: 400 });
 
-    const { error } = await supabase.from('experiences').update(updateData).eq('id', id).eq('user_id', userId);
+    const { error } = await supabase.from('experiences').update({
+      ...updateData,
+      interest_id: updateData.interest_id || null
+    }).eq('id', id).eq('user_id', userId);
+
     if (error) return NextResponse.json({ error: 'Failed to update experience.' }, { status: 500 });
 
     await checkAndAwardBadges(userId, supabase);

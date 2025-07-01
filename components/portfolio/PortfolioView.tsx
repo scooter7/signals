@@ -8,14 +8,23 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
 import { PlusCircle, Trash2, ExternalLink } from 'lucide-react';
+import { Database } from '@/lib/database.types';
 
-export default function PortfolioView({ initialItems }: { initialItems: PortfolioItem[] }) {
+type Interest = Database['public']['Tables']['interests']['Row'];
+
+interface PortfolioViewProps {
+  initialItems: PortfolioItem[];
+  interests: Interest[];
+}
+
+export default function PortfolioView({ initialItems, interests }: PortfolioViewProps) {
   const router = useRouter();
   const [items, setItems] = useState<PortfolioItem[]>(initialItems);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  const [interestId, setInterestId] = useState<number | null>(null); // New state for category
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,14 +36,14 @@ export default function PortfolioView({ initialItems }: { initialItems: Portfoli
     const response = await fetch('/api/portfolio', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, description, link_url: linkUrl }),
+      body: JSON.stringify({ title, description, link_url: linkUrl, interest_id: interestId }),
     });
 
     if (response.ok) {
-      // Reset form and refresh data from server
       setTitle('');
       setDescription('');
       setLinkUrl('');
+      setInterestId(null);
       setShowForm(false);
       router.refresh();
     } else {
@@ -85,6 +94,20 @@ export default function PortfolioView({ initialItems }: { initialItems: Portfoli
               <div>
                 <label htmlFor="title" className="block text-sm font-medium mb-1">Title *</label>
                 <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+              </div>
+              <div>
+                <label htmlFor="interest" className="block text-sm font-medium mb-1">Category</label>
+                <select 
+                  id="interest" 
+                  value={interestId || ''} 
+                  onChange={(e) => setInterestId(e.target.value ? parseInt(e.target.value) : null)} 
+                  className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Select a Category --</option>
+                  {interests.map(interest => (
+                    <option key={interest.id} value={interest.id}>{interest.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label htmlFor="description" className="block text-sm font-medium mb-1">Description</label>

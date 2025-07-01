@@ -12,14 +12,16 @@ export type EarnedBadge = Database['public']['Tables']['user_badges']['Row'] & {
     icon_url: string | null;
   } | null;
 };
+type Interest = Database['public']['Tables']['interests']['Row'];
+
 
 export default async function PortfolioPage() {
-  const supabase = createClient(); // FIX: No argument needed
+  const supabase = createClient();
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/login');
 
-  const [portfolioData, badgesData] = await Promise.all([
+  const [portfolioData, badgesData, interestsData] = await Promise.all([
     supabase
       .from('portfolio_items')
       .select('*')
@@ -28,11 +30,13 @@ export default async function PortfolioPage() {
     supabase
       .from('user_badges')
       .select(`*, badges (name, description, icon_url)`)
-      .eq('user_id', session.user.id)
+      .eq('user_id', session.user.id),
+    supabase.from('interests').select('*').order('name'),
   ]);
 
   const portfolioItems = portfolioData.data || [];
   const earnedBadges = (badgesData.data as EarnedBadge[]) || [];
+  const interests = interestsData.data || [];
 
   return (
     <div>
@@ -64,7 +68,7 @@ export default async function PortfolioPage() {
         Showcase your best work. Add projects, papers, presentations, or any other evidence of your skills and achievements.
       </p>
 
-      <PortfolioView initialItems={portfolioItems} />
+      <PortfolioView initialItems={portfolioItems} interests={interests} />
     </div>
   );
 }
