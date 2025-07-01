@@ -6,13 +6,16 @@ import { ProfileWithInterests } from '@/app/(main)/network/page'; // Import the 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { UserPlus, CheckCircle, Zap } from 'lucide-react';
-import { formatUserRole } from '@/lib/utils';
+import { formatUserRole, getSignalStrength } from '@/lib/utils'; // Import the new helper
 
 // Update the props to use the more detailed ProfileWithInterests type
 export default function UserCard({ profile }: { profile: ProfileWithInterests }) {
   const router = useRouter();
   const [isRequested, setIsRequested] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Get the qualitative signal strength from the numeric score
+  const signal = getSignalStrength(profile.compatibility_score || 0);
 
   const handleConnect = async () => {
     setIsLoading(true);
@@ -45,13 +48,13 @@ export default function UserCard({ profile }: { profile: ProfileWithInterests })
         <CardDescription>{formatUserRole(profile.role)}</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow px-4 pb-4">
-         {/* Display the new Signal Score */}
+         {/* Display the new qualitative Signal Strength */}
         <div 
-          className="flex items-center justify-center gap-2 mb-2 text-purple-600 font-semibold"
-          title="This Signal Score represents your compatibility based on shared interests, roles, and overall activity."
+          className={`flex items-center justify-center gap-2 mb-2 font-semibold ${signal.color}`}
+          title="This Signal represents your compatibility based on shared interests, roles, and overall activity."
         >
-            <Zap size={16} className="text-purple-500" />
-            <span>{Math.round(profile.compatibility_score || 0)} Signal</span>
+            <Zap size={16} />
+            <span>{signal.label}</span>
         </div>
         <p className="text-sm text-gray-600 truncate px-2">{profile.headline || 'No headline provided.'}</p>
       </CardContent>
