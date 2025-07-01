@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ProfileWithInterests } from '@/app/(main)/network/page'; // Import the specific type
+import { ProfileWithDetails } from '@/app/(main)/network/page'; // FIX: Import the correct type name
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { UserPlus, CheckCircle, Zap } from 'lucide-react';
-import { formatUserRole, getSignalStrength } from '@/lib/utils'; // Import the new helper
+import { formatUserRole, getSignalStrength } from '@/lib/utils';
 
-// Update the props to use the more detailed ProfileWithInterests type
-export default function UserCard({ profile }: { profile: ProfileWithInterests }) {
+// Update the props to use the correct ProfileWithDetails type
+export default function UserCard({ profile }: { profile: ProfileWithDetails }) {
   const router = useRouter();
   const [isRequested, setIsRequested] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
