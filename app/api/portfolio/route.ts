@@ -1,7 +1,8 @@
+// scooter7/signals/signals-ff56013aed11c73aa30372363d7b35c2180d897a/app/api/portfolio/route.ts
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
-import { checkAndAwardBadges, calculateSignalScore } from '@/lib/gamification';
+import { checkAndAwardBadges, calculateActivityScore } from '@/lib/gamification';
 
 // POST - Create a new portfolio item
 export async function POST(request: Request) {
@@ -34,8 +35,8 @@ export async function POST(request: Request) {
     event_description: `added a new portfolio item: ${newPortfolioItem.title}`
   });
   await checkAndAwardBadges(userId, supabase);
-  const newSignalScore = await calculateSignalScore(userId, supabase);
-  await supabase.from('profiles').update({ signal_score: newSignalScore }).eq('id', userId);
+  const newActivityScore = await calculateActivityScore(userId, supabase);
+  await supabase.from('profiles').update({ activity_score: newActivityScore }).eq('id', userId);
   // --- End Logic ---
 
   revalidatePath('/portfolio');
@@ -57,8 +58,8 @@ export async function DELETE(request: Request) {
     if (error) return NextResponse.json({ error: 'Failed to delete item.' }, { status: 500 });
 
     await checkAndAwardBadges(userId, supabase);
-    const newSignalScore = await calculateSignalScore(userId, supabase);
-    await supabase.from('profiles').update({ signal_score: newSignalScore }).eq('id', userId);
+    const newActivityScore = await calculateActivityScore(userId, supabase);
+    await supabase.from('profiles').update({ activity_score: newActivityScore }).eq('id', userId);
 
     revalidatePath('/portfolio');
     revalidatePath('/dashboard');

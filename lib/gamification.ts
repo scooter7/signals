@@ -1,130 +1,14 @@
-// scooter7/signals/signals-e14ad08976b81031ca9347e5cf5e70b329218bfc/lib/gamification.ts
-import { createClient } from '@/lib/supabase/server';
+// scooter7/signals/signals-ff56013aed11c73aa30372363d7b35c2180d897a/lib/gamification.ts
 import { Database } from './database.types';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 type Badge = Database['public']['Tables']['badges']['Row'];
+type UserRole = Database['public']['Enums']['user_role'];
+type Interest = { interest_id: number };
 
-// Helper function to check if a user's profile meets badge criteria
-const checkProfileBadge = (badge: Badge, profile: Profile): boolean => {
-    if (!badge.criteria || typeof badge.criteria !== 'object' || !('fields' in badge.criteria)) {
-        return false;
-    }
-    const requiredFields = badge.criteria.fields as string[];
-    return requiredFields.every(field => profile[field as keyof Profile]);
-};
-
-// Helper function to check if experience count meets badge criteria
-const checkExperienceBadge = async (badge: Badge, userId: string, supabase: any): Promise<boolean> => {
-    if (!badge.criteria || typeof badge.criteria !== 'object' || !('count' in badge.criteria)) {
-        return false;
-    }
-    const requiredCount = badge.criteria.count as number;
-    const { count, error } = await supabase
-        .from('experiences')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
-    
-    if (error) return false;
-    return count >= requiredCount;
-};
-
-// Helper function to check if portfolio item count meets badge criteria
-const checkPortfolioBadge = async (badge: Badge, userId: string, supabase: any): Promise<boolean> => {
-    if (!badge.criteria || typeof badge.criteria !== 'object' || !('count' in badge.criteria)) {
-        return false;
-    }
-    const requiredCount = badge.criteria.count as number;
-    const { count, error } = await supabase
-        .from('portfolio_items')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
-
-    if (error) return false;
-    return count >= requiredCount;
-};
-
-// Helper function to check if interest count meets badge criteria
-const checkInterestBadge = async (badge: Badge, userId:string, supabase: any): Promise<boolean> => {
-    if (!badge.criteria || typeof badge.criteria !== 'object' || !('count' in badge.criteria)) {
-        return false;
-    }
-    const requiredCount = badge.criteria.count as number;
-    const { count, error } = await supabase
-        .from('user_interests')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
-
-    if (error) return false;
-    return count >= requiredCount;
-};
-
-// Main function to check and award badges
-export async function checkAndAwardBadges(userId: string, supabase: any) {
-    const { data: allBadges, error: badgesError } = await supabase.from('badges').select('*');
-    const { data: userProfile, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    
-    if (badgesError || profileError || !allBadges || !userProfile) {
-        console.error("Error fetching data for badge check:", badgesError || profileError);
-        return;
-    }
-
-    const { data: earnedBadges, error: earnedError } = await supabase
-        .from('user_badges')
-        .select('badge_id')
-        .eq('user_id', userId);
-
-    if (earnedError) {
-        console.error("Error fetching earned badges:", earnedError);
-        return;
-    }
-    
-    const earnedBadgeIds = new Set((earnedBadges || []).map((b: { badge_id: number }) => b.badge_id));
-
-    const badgesToCheck = allBadges.filter((badge: Badge) => !earnedBadgeIds.has(badge.id));
-    const badgesToAward: number[] = [];
-
-    for (const badge of badgesToCheck) {
-        let earned = false;
-        const criteria = badge.criteria as any;
-
-        switch (criteria.type) {
-            case 'profile':
-                if (checkProfileBadge(badge, userProfile)) earned = true;
-                break;
-            case 'experience':
-                if (await checkExperienceBadge(badge, userId, supabase)) earned = true;
-                break;
-            case 'portfolio':
-                if (await checkPortfolioBadge(badge, userId, supabase)) earned = true;
-                break;
-            case 'interest':
-                if (await checkInterestBadge(badge, userId, supabase)) earned = true;
-                break;
-        }
-
-        if (earned) {
-            badgesToAward.push(badge.id);
-        }
-    }
-
-    if (badgesToAward.length > 0) {
-        const newEarnedBadges = badgesToAward.map(badgeId => ({
-            user_id: userId,
-            badge_id: badgeId,
-        }));
-        
-        const { error: insertError } = await supabase.from('user_badges').insert(newEarnedBadges);
-        if (insertError) {
-            console.error("Error awarding badges:", insertError);
-        } else {
-            console.log(`Awarded ${badgesToAward.length} new badges to user ${userId}`);
-        }
-    }
-}
-
-// --- Signal Score Calculation ---
-export async function calculateSignalScore(userId: string, supabase: any): Promise<number> {
+// --- Activity Score Calculation (Formerly Signal Score) ---
+// This calculates a user's individual engagement score.
+export async function calculateActivityScore(userId: string, supabase: any): Promise<number> {
     const SCORE_WEIGHTS = {
         PROFILE_FIELD: 5,
         EXPERIENCE: 10,
@@ -136,7 +20,6 @@ export async function calculateSignalScore(userId: string, supabase: any): Promi
 
     let totalScore = 0;
 
-    // Fetch all data in parallel, now including sent messages
     const [profileData, experiencesCount, portfolioCount, badgesCount, messagesCount, aiUsesCount] = await Promise.all([
         supabase.from('profiles').select('bio, headline').eq('id', userId).single(),
         supabase.from('experiences').select('*', { count: 'exact', head: true }).eq('user_id', userId),
@@ -156,4 +39,129 @@ export async function calculateSignalScore(userId: string, supabase: any): Promi
     totalScore += (aiUsesCount.count || 0) * SCORE_WEIGHTS.AI_ADVISOR_USED;
 
     return totalScore;
+}
+
+// --- Dynamic Compatibility Score (The New "Signal Score") ---
+// This function is now a pure function that calculates compatibility between two users.
+export function calculateCompatibilityScore(
+    currentUser: { role: UserRole, interests: Interest[] },
+    otherUser: { role: UserRole, interests: Interest[] }
+): number {
+    const COMPATIBILITY_WEIGHTS = {
+        SHARED_INTEREST: 50,
+        ROLE_MATCH: 100,
+    };
+
+    let compatibilityScore = 0;
+
+    // 1. Calculate score from common interests
+    const currentUserInterestIds = new Set(currentUser.interests.map(i => i.interest_id));
+    const commonInterests = otherUser.interests.filter(i => currentUserInterestIds.has(i.interest_id));
+    compatibilityScore += commonInterests.length * COMPATIBILITY_WEIGHTS.SHARED_INTEREST;
+
+    // 2. Calculate score from role compatibility ("Phase of Life")
+    const roleA = currentUser.role;
+    const roleB = otherUser.role;
+
+    if (
+        (roleA === 'high_school_student' && roleB === 'college_recruiter') ||
+        (roleB === 'high_school_student' && roleA === 'college_recruiter')
+    ) {
+        compatibilityScore += COMPATIBILITY_WEIGHTS.ROLE_MATCH;
+    }
+
+    if (
+        ( (roleA === 'college_student' || roleA === 'job_seeker') && roleB === 'corporate_recruiter') ||
+        ( (roleB === 'college_student' || roleB === 'job_seeker') && roleA === 'corporate_recruiter')
+    ) {
+        compatibilityScore += COMPATIBILITY_WEIGHTS.ROLE_MATCH;
+    }
+
+    return compatibilityScore;
+}
+
+
+// --- Badge Awarding Logic (Remains the same, but for completeness) ---
+const checkProfileBadge = (badge: Badge, profile: Profile): boolean => {
+    if (!badge.criteria || typeof badge.criteria !== 'object' || !('fields' in badge.criteria)) {
+        return false;
+    }
+    const requiredFields = badge.criteria.fields as string[];
+    return requiredFields.every(field => profile[field as keyof Profile]);
+};
+const checkExperienceBadge = async (badge: Badge, userId: string, supabase: any): Promise<boolean> => {
+    if (!badge.criteria || typeof badge.criteria !== 'object' || !('count' in badge.criteria)) {
+        return false;
+    }
+    const requiredCount = badge.criteria.count as number;
+    const { count, error } = await supabase.from('experiences').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+    if (error) return false;
+    return count >= requiredCount;
+};
+const checkPortfolioBadge = async (badge: Badge, userId: string, supabase: any): Promise<boolean> => {
+    if (!badge.criteria || typeof badge.criteria !== 'object' || !('count' in badge.criteria)) {
+        return false;
+    }
+    const requiredCount = badge.criteria.count as number;
+    const { count, error } = await supabase.from('portfolio_items').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+    if (error) return false;
+    return count >= requiredCount;
+};
+const checkInterestBadge = async (badge: Badge, userId:string, supabase: any): Promise<boolean> => {
+    if (!badge.criteria || typeof badge.criteria !== 'object' || !('count' in badge.criteria)) {
+        return false;
+    }
+    const requiredCount = badge.criteria.count as number;
+    const { count, error } = await supabase.from('user_interests').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+    if (error) return false;
+    return count >= requiredCount;
+};
+export async function checkAndAwardBadges(userId: string, supabase: any) {
+    const { data: allBadges, error: badgesError } = await supabase.from('badges').select('*');
+    const { data: userProfile, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (badgesError || profileError || !allBadges || !userProfile) {
+        console.error("Error fetching data for badge check:", badgesError || profileError);
+        return;
+    }
+    const { data: earnedBadges, error: earnedError } = await supabase.from('user_badges').select('badge_id').eq('user_id', userId);
+    if (earnedError) {
+        console.error("Error fetching earned badges:", earnedError);
+        return;
+    }
+    const earnedBadgeIds = new Set((earnedBadges || []).map((b: { badge_id: number }) => b.badge_id));
+    const badgesToCheck = allBadges.filter((badge: Badge) => !earnedBadgeIds.has(badge.id));
+    const badgesToAward: number[] = [];
+    for (const badge of badgesToCheck) {
+        let earned = false;
+        const criteria = badge.criteria as any;
+        switch (criteria.type) {
+            case 'profile':
+                if (checkProfileBadge(badge, userProfile)) earned = true;
+                break;
+            case 'experience':
+                if (await checkExperienceBadge(badge, userId, supabase)) earned = true;
+                break;
+            case 'portfolio':
+                if (await checkPortfolioBadge(badge, userId, supabase)) earned = true;
+                break;
+            case 'interest':
+                if (await checkInterestBadge(badge, userId, supabase)) earned = true;
+                break;
+        }
+        if (earned) {
+            badgesToAward.push(badge.id);
+        }
+    }
+    if (badgesToAward.length > 0) {
+        const newEarnedBadges = badgesToAward.map(badgeId => ({
+            user_id: userId,
+            badge_id: badgeId,
+        }));
+        const { error: insertError } = await supabase.from('user_badges').insert(newEarnedBadges);
+        if (insertError) {
+            console.error("Error awarding badges:", insertError);
+        } else {
+            console.log(`Awarded ${badgesToAward.length} new badges to user ${userId}`);
+        }
+    }
 }

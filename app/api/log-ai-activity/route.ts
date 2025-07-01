@@ -1,6 +1,7 @@
+// scooter7/signals/signals-ff56013aed11c73aa30372363d7b35c2180d897a/app/api/log-ai-activity/route.ts
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { checkAndAwardBadges, calculateSignalScore } from '@/lib/gamification';
+import { checkAndAwardBadges, calculateActivityScore } from '@/lib/gamification';
 import { revalidatePath } from 'next/cache';
 
 export async function POST(request: Request) {
@@ -17,8 +18,8 @@ export async function POST(request: Request) {
     event_description: 'used the AI Advisor for career advice.'
   });
   await checkAndAwardBadges(userId, supabase);
-  const newSignalScore = await calculateSignalScore(userId, supabase);
-  await supabase.from('profiles').update({ signal_score: newSignalScore }).eq('id', userId);
+  const newActivityScore = await calculateActivityScore(userId, supabase);
+  await supabase.from('profiles').update({ activity_score: newActivityScore }).eq('id', userId);
   // --- End Logic ---
 
   revalidatePath('/dashboard');

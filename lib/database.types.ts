@@ -1,4 +1,4 @@
-// scooter7/signals/signals-e14ad08976b81031ca9347e5cf5e70b329218bfc/lib/database.types.ts
+// scooter7/signals/signals-ff56013aed11c73aa30372363d7b35c2180d897a/lib/database.types.ts
 export type Json =
   | string
   | number
@@ -397,7 +397,7 @@ export type Database = {
           headline: string | null
           id: string
           role: Database["public"]["Enums"]["user_role"]
-          signal_score: number
+          activity_score: number
           updated_at: string | null
           username: string | null
         }
@@ -409,7 +409,7 @@ export type Database = {
           headline?: string | null
           id: string
           role: Database["public"]["Enums"]["user_role"]
-          signal_score?: number
+          activity_score?: number
           updated_at?: string | null
           username?: string | null
         }
@@ -421,7 +421,7 @@ export type Database = {
           headline?: string | null
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
-          signal_score?: number
+          activity_score?: number
           updated_at?: string | null
           username?: string | null
         }
