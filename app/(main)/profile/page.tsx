@@ -2,9 +2,10 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import ProfileEditor from '@/components/dashboard/ProfileEditor';
 import { User } from 'lucide-react';
+import { Database } from '@/lib/database.types';
 
 export default async function ProfilePage() {
-  const supabase = createClient(); // FIX: No argument needed
+  const supabase = createClient();
 
   const {
     data: { session },
@@ -14,16 +15,26 @@ export default async function ProfilePage() {
     redirect('/login');
   }
 
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', session.user.id)
-    .single();
+  const userId = session.user.id;
 
-  if (error || !profile) {
-    console.error('Error fetching profile:', error);
+  // Fetch profile, all interests, and the user's selected interests in parallel
+  const [profileData, interestsData, userInterestsData] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', userId).single(),
+    supabase.from('interests').select('*').order('name'),
+    supabase.from('user_interests').select('interest_id').eq('user_id', userId),
+  ]);
+
+  const { data: profile, error: profileError } = profileData;
+  const { data: allInterests, error: interestsError } = interestsData;
+  const { data: userInterests, error: userInterestsError } = userInterestsData;
+
+  if (profileError || !profile || interestsError || userInterestsError) {
+    console.error('Error fetching profile data:', profileError || interestsError || userInterestsError);
     return <div>Error loading profile. Please try again later.</div>;
   }
+
+  // Extract just the IDs for easier handling in the editor
+  const userInterestIds = userInterests.map(interest => interest.interest_id);
 
   return (
     <div>
@@ -33,7 +44,11 @@ export default async function ProfilePage() {
       </div>
 
       <div className="bg-white p-8 rounded-xl shadow-md">
-        <ProfileEditor profile={profile} />
+        <ProfileEditor
+          profile={profile}
+          allInterests={allInterests || []}
+          userInterestIds={userInterestIds}
+        />
       </div>
     </div>
   );

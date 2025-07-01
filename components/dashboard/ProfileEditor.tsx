@@ -6,17 +6,85 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import type { Database } from '@/lib/database.types';
+import { ChevronDown } from 'lucide-react';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 type UserRole = Database['public']['Enums']['user_role'];
+type Interest = Database['public']['Tables']['interests']['Row'];
 
-export default function ProfileEditor({ profile }: { profile: Profile }) {
+interface ProfileEditorProps {
+  profile: Profile;
+  allInterests: Interest[];
+  userInterestIds: number[];
+}
+
+function MultiSelect({
+  options,
+  selected,
+  onChange,
+  placeholder = "Select..."
+}: {
+  options: { value: number; label: string }[];
+  selected: number[];
+  onChange: (selected: number[]) => void;
+  placeholder?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedLabels = options
+    .filter(op => selected.includes(op.value))
+    .map(op => op.label);
+
+  const handleSelect = (value: number) => {
+    if (selected.includes(value)) {
+      onChange(selected.filter(v => v !== value));
+    } else {
+      onChange([...selected, value]);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className="flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-left"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className="truncate">
+          {selectedLabels.length > 0 ? selectedLabels.join(', ') : placeholder}
+        </span>
+        <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg max-h-60 overflow-y-auto">
+          {options.map(option => (
+            <div
+              key={option.value}
+              className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
+              onClick={() => handleSelect(option.value)}
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(option.value)}
+                readOnly
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2"
+              />
+              <span>{option.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ProfileEditor({ profile, allInterests, userInterestIds }: ProfileEditorProps) {
   const router = useRouter();
   const [fullName, setFullName] = useState(profile.full_name || '');
   const [username, setUsername] = useState(profile.username || '');
   const [headline, setHeadline] = useState(profile.headline || '');
   const [bio, setBio] = useState(profile.bio || '');
   const [role, setRole] = useState<UserRole>(profile.role);
+  const [selectedInterests, setSelectedInterests] = useState<number[]>(userInterestIds);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -36,6 +104,7 @@ export default function ProfileEditor({ profile }: { profile: Profile }) {
         headline: headline,
         bio: bio,
         role: role,
+        interest_ids: selectedInterests,
       }),
     });
 
@@ -49,6 +118,8 @@ export default function ProfileEditor({ profile }: { profile: Profile }) {
         setMessage({ type: 'error', text: error || 'An unexpected error occurred.' });
     }
   };
+
+  const interestOptions = allInterests.map(i => ({ value: i.id, label: i.name }));
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -77,6 +148,17 @@ export default function ProfileEditor({ profile }: { profile: Profile }) {
             <option value="college_recruiter">College Administrator</option>
             <option value="corporate_recruiter">Corporate Talent Seeker</option>
         </select>
+      </div>
+
+      <div className="space-y-1">
+          <label htmlFor="interests" className="font-medium">Fields of Interest</label>
+          <p className="text-sm text-gray-500">Select one or more fields you work in or are interested in.</p>
+          <MultiSelect
+              options={interestOptions}
+              selected={selectedInterests}
+              onChange={setSelectedInterests}
+              placeholder="Select your interests..."
+          />
       </div>
 
       <div className="space-y-1">
