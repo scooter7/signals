@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
-import { checkAndAwardBadges, calculateSignalScore } from '@/lib/gamification';
+import { checkAndAwardBadges, calculateActivityScore } from '@/lib/gamification';
 
 // POST - Create a new connection request
 export async function POST(request: Request) {
@@ -39,7 +39,7 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
     }
 
-    const { data: connection, error } = await supabase
+    const { data: connection, error: updateError } = await supabase
         .from('connections')
         .update({ status: status, updated_at: new Date().toISOString() })
         .eq('id', id)
@@ -47,8 +47,8 @@ export async function PATCH(request: Request) {
         .select('*, requester:profiles!connections_requester_id_fkey(full_name), addressee:profiles!connections_addressee_id_fkey(full_name)')
         .single();
 
-    if (error || !connection) {
-        console.error('Error updating connection:', error);
+    if (updateError || !connection) {
+        console.error('Error updating connection:', updateError);
         return NextResponse.json({ error: 'Failed to update connection' }, { status: 500 });
     }
 
@@ -70,6 +70,13 @@ export async function PATCH(request: Request) {
                 related_user_id: connection.addressee_id
             }
         ]);
+
+        // Update activity scores for both users involved in the new connection
+        const newScoreUserA = await calculateActivityScore(connection.addressee_id, supabase);
+        await supabase.from('profiles').update({ activity_score: newScoreUserA }).eq('id', connection.addressee_id);
+        
+        const newScoreUserB = await calculateActivityScore(connection.requester_id, supabase);
+        await supabase.from('profiles').update({ activity_score: newScoreUserB }).eq('id', connection.requester_id);
     }
     // --- END ACTIVITY LOG ---
 
