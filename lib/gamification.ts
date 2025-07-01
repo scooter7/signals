@@ -1,10 +1,14 @@
-// scooter7/signals/signals-ff56013aed11c73aa30372363d7b35c2180d897a/lib/gamification.ts
 import { Database } from './database.types';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 type Badge = Database['public']['Tables']['badges']['Row'];
 type UserRole = Database['public']['Enums']['user_role'];
-type Interest = { interest_id: number };
+
+// A more specific type for a profile that includes its interests, as returned by Supabase
+type ProfileWithInterests = Profile & {
+    user_interests: { interest_id: number }[];
+};
+
 
 // --- Activity Score Calculation (Formerly Signal Score) ---
 // This calculates a user's individual engagement score.
@@ -44,8 +48,8 @@ export async function calculateActivityScore(userId: string, supabase: any): Pro
 // --- Dynamic Compatibility Score (The New "Signal Score") ---
 // This function is now a pure function that calculates compatibility between two users.
 export function calculateCompatibilityScore(
-    currentUser: { role: UserRole, interests: Interest[] },
-    otherUser: { role: UserRole, interests: Interest[] }
+    currentUser: ProfileWithInterests,
+    otherUser: ProfileWithInterests
 ): number {
     const COMPATIBILITY_WEIGHTS = {
         SHARED_INTEREST: 50,
@@ -55,8 +59,9 @@ export function calculateCompatibilityScore(
     let compatibilityScore = 0;
 
     // 1. Calculate score from common interests
-    const currentUserInterestIds = new Set(currentUser.interests.map(i => i.interest_id));
-    const commonInterests = otherUser.interests.filter(i => currentUserInterestIds.has(i.interest_id));
+    // FIX: Access the correctly named 'user_interests' property
+    const currentUserInterestIds = new Set(currentUser.user_interests.map(i => i.interest_id));
+    const commonInterests = otherUser.user_interests.filter(i => currentUserInterestIds.has(i.interest_id));
     compatibilityScore += commonInterests.length * COMPATIBILITY_WEIGHTS.SHARED_INTEREST;
 
     // 2. Calculate score from role compatibility ("Phase of Life")
