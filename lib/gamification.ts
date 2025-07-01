@@ -49,13 +49,13 @@ export function calculateCompatibilityScore(
 ): number {
     const COMPATIBILITY_WEIGHTS = {
         ROLE_MATCH: 100,
-        SHARED_INTEREST: 25, // A user's stated interest matches another's
-        INTEREST_EXPERIENCE_MATCH: 75, // A user's interest matches another's categorized experience/project
+        SHARED_INTEREST: 25,
+        INTEREST_EXPERIENCE_MATCH: 75,
     };
 
     let compatibilityScore = 0;
 
-    // 1. Role compatibility ("Phase of Life")
+    // 1. Role compatibility
     const roleA = currentUser.role;
     const roleB = otherUser.role;
     if ((roleA === 'high_school_student' && roleB === 'college_recruiter') || (roleB === 'high_school_student' && roleA === 'college_recruiter')) {
@@ -72,8 +72,8 @@ export function calculateCompatibilityScore(
     const otherUserExperienceIds = new Set(otherUser.experiences.map(e => e.interest_id).filter(Boolean));
     const otherUserPortfolioIds = new Set(otherUser.portfolio_items.map(p => p.interest_id).filter(Boolean));
 
-    // Check for matches between current user's interests and the other user's profile
-    for (const interestId of currentUserInterestIds) {
+    // FIX: Use forEach for compatibility with older JS targets
+    currentUserInterestIds.forEach(interestId => {
         if (otherUserInterestIds.has(interestId)) {
             compatibilityScore += COMPATIBILITY_WEIGHTS.SHARED_INTEREST;
         }
@@ -83,27 +83,27 @@ export function calculateCompatibilityScore(
         if (otherUserPortfolioIds.has(interestId)) {
             compatibilityScore += COMPATIBILITY_WEIGHTS.INTEREST_EXPERIENCE_MATCH;
         }
-    }
+    });
 
     // Do the same check in reverse
     const currentUserExperienceIds = new Set(currentUser.experiences.map(e => e.interest_id).filter(Boolean));
     const currentUserPortfolioIds = new Set(currentUser.portfolio_items.map(p => p.interest_id).filter(Boolean));
 
-    for (const interestId of otherUserInterestIds) {
+    // FIX: Use forEach for compatibility
+    otherUserInterestIds.forEach(interestId => {
         if (currentUserExperienceIds.has(interestId)) {
             compatibilityScore += COMPATIBILITY_WEIGHTS.INTEREST_EXPERIENCE_MATCH;
         }
         if (currentUserPortfolioIds.has(interestId)) {
             compatibilityScore += COMPATIBILITY_WEIGHTS.INTEREST_EXPERIENCE_MATCH;
         }
-    }
+    });
 
     return compatibilityScore;
 }
 
 
 // --- Badge Awarding Logic ---
-// (This logic remains unchanged but is included for completeness)
 const checkProfileBadge = (badge: Badge, profile: Profile): boolean => {
     if (!badge.criteria || typeof badge.criteria !== 'object' || !('fields' in badge.criteria)) return false;
     const requiredFields = badge.criteria.fields as string[];
